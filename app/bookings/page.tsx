@@ -51,7 +51,7 @@ export default async function BookingsPage() {
   const bookings = await getUserBookings();
 
   if (bookings === null) {
-    redirect("/auth");
+    redirect("/auth?next=/bookings");
   }
 
   const getStatusColor = (status: string) => {
