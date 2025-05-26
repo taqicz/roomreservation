@@ -4,22 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { convertToProfile, type Profile } from "@/lib/supabase/types";
 import { CalendarDays, Home, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  user_role: string;
-}
-
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const supabase = getSupabaseBrowser();
 
@@ -38,6 +33,7 @@ export default function DashboardPage() {
         const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
         if (error && error.code === "PGRST116") {
+          // Profile doesn't exist, create one
           const { data: newProfile, error: insertError } = await supabase
             .from("profiles")
             .insert({
@@ -46,17 +42,18 @@ export default function DashboardPage() {
               full_name: user.user_metadata?.full_name || "",
               user_role: "student",
             })
-            .select()
+            .select("*")
             .single();
 
           if (!insertError && newProfile) {
-            setProfile(newProfile as UserProfile);
+            setProfile(convertToProfile(newProfile));
           }
         } else if (data) {
-          setProfile(data as UserProfile);
+          setProfile(convertToProfile(data));
         }
       } catch (error) {
         console.error("Error loading profile:", error);
+        setError("Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -75,6 +72,20 @@ export default function DashboardPage() {
 
   if (!user) {
     return null;
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600">Error</h1>
+          <p className="text-gray-600 mt-2">{error}</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   const displayName = profile?.full_name || user.email || "User";

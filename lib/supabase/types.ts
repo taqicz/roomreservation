@@ -68,15 +68,28 @@ export function isValidProfile(data: any): data is Profile {
   return data && typeof data.id === "string" && typeof data.email === "string" && (data.full_name === null || typeof data.full_name === "string") && (data.user_role === "admin" || data.user_role === "student");
 }
 
+// Safe type conversion functions
+export function safeString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+export function safeStringOrNull(value: unknown): string | null {
+  return typeof value === "string" ? value : value === null ? null : "";
+}
+
+export function safeUserRole(value: unknown): "admin" | "student" {
+  return value === "admin" ? "admin" : "student";
+}
+
 // Type conversion function
-export function convertToProfile(data: DatabaseProfile): Profile {
+export function convertToProfile(data: any): Profile {
   return {
-    id: String(data.id),
-    email: String(data.email),
-    full_name: data.full_name ? String(data.full_name) : null,
-    user_role: String(data.user_role) as "admin" | "student",
-    created_at: String(data.created_at),
-    updated_at: data.updated_at ? String(data.updated_at) : null,
+    id: safeString(data.id),
+    email: safeString(data.email),
+    full_name: safeStringOrNull(data.full_name),
+    user_role: safeUserRole(data.user_role),
+    created_at: safeString(data.created_at),
+    updated_at: safeStringOrNull(data.updated_at),
   };
 }
 
