@@ -1,7 +1,5 @@
 "use client";
 
-import type React from "react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +9,22 @@ import { useAuth } from "@/lib/auth-context";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type React from "react";
 import { useEffect, useState } from "react";
 
+interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  user_role: string;
+}
+
 export default function ProfilePage() {
-  const { user, profile, loading: authLoading, signOut, refreshProfile } = useAuth();
-  const [updating, setUpdating] = useState(false);
+  const { user, loading: authLoading, signOut } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [fullName, setFullName] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const router = useRouter();
@@ -30,20 +38,54 @@ export default function ProfilePage() {
       return;
     }
 
-    if (profile) {
-      setFullName(profile.full_name || "");
+    async function loadProfile() {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+
+        if (error && error.code === "PGRST116") {
+          const { data: newProfile, error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              email: user.email || "",
+              full_name: user.user_metadata?.full_name || "",
+              user_role: "student",
+            })
+            .select()
+            .single();
+
+          if (!insertError && newProfile) {
+            const typedProfile = newProfile as UserProfile;
+            setProfile(typedProfile);
+            setFullName(typedProfile.full_name || "");
+          }
+        } else if (data) {
+          const typedProfile = data as UserProfile;
+          setProfile(typedProfile);
+          setFullName(typedProfile.full_name || "");
+        }
+      } catch (error) {
+        console.error("Error loading profile:", error);
+        setError("Failed to load profile");
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [user, profile, authLoading, router]);
+
+    loadProfile();
+  }, [user, authLoading, router, supabase]);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
+
     setUpdating(true);
     setError(null);
     setSuccess(null);
 
     try {
-      if (!user) throw new Error("Not authenticated");
-
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -55,7 +97,10 @@ export default function ProfilePage() {
       if (error) throw error;
 
       setSuccess("Profile updated successfully");
-      await refreshProfile();
+
+      if (profile) {
+        setProfile({ ...profile, full_name: fullName });
+      }
     } catch (error: any) {
       setError(error.message || "An error occurred while updating your profile");
     } finally {
@@ -63,12 +108,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
-  };
-
-  if (authLoading) {
+  if (authLoading || loading) {
     return (
       <div className="flex justify-center items-center min-h-[calc(100vh-4rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -77,7 +117,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return (
@@ -116,19 +156,24 @@ export default function ProfilePage() {
 
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Enter your full name" />
               </div>
 
               <div className="space-y-2">
                 <Label>Account Type</Label>
                 <div className="p-2 bg-gray-50 rounded-md">{profile?.user_role === "admin" ? "Administrator" : "Student"}</div>
               </div>
+
+              <div className="space-y-2">
+                <Label>Member Since</Label>
+                <div className="p-2 bg-gray-50 rounded-md">{new Date(user.created_at).toLocaleDateString()}</div>
+              </div>
             </CardContent>
             <CardFooter className="flex justify-between">
               <Button type="submit" disabled={updating}>
                 {updating ? "Saving..." : "Save Changes"}
               </Button>
-              <Button type="button" variant="outline" onClick={handleSignOut}>
+              <Button type="button" variant="outline" onClick={signOut}>
                 Sign Out
               </Button>
             </CardFooter>

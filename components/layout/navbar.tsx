@@ -11,14 +11,7 @@ import { useState } from "react";
 export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { user, profile, signOut } = useAuth();
-
-  const isAdmin = profile?.user_role === "admin";
-
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/";
-  };
+  const { user, signOut } = useAuth();
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -53,16 +46,6 @@ export function Navbar() {
                   My Bookings
                 </Link>
               )}
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                    pathname.startsWith("/admin") ? "border-primary text-gray-900" : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
-                  }`}
-                >
-                  Admin
-                </Link>
-              )}
             </div>
           </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
@@ -85,7 +68,7 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
+                  <DropdownMenuItem onClick={signOut}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -105,7 +88,6 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {isMobileMenuOpen && (
         <div className="sm:hidden">
           <div className="pt-2 pb-3 space-y-1">
@@ -150,21 +132,10 @@ export function Navbar() {
                 </Link>
               </>
             )}
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                  pathname.startsWith("/admin") ? "border-primary text-primary bg-primary-foreground/10" : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
-                }`}
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Admin
-              </Link>
-            )}
             {user ? (
               <button
                 onClick={() => {
-                  handleSignOut();
+                  signOut();
                   setIsMobileMenuOpen(false);
                 }}
                 className="block w-full text-left pl-3 pr-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"

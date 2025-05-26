@@ -1,7 +1,5 @@
 "use client";
 
-import type React from "react";
-
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { AlertCircle, CheckCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import type React from "react";
 import { useState } from "react";
 
 export function AuthForm() {
@@ -20,7 +18,6 @@ export function AuthForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const router = useRouter();
   const supabase = getSupabaseBrowser();
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -45,8 +42,7 @@ export function AuthForm() {
       if (data.session) {
         setSuccess("Successfully signed in! Redirecting...");
         setTimeout(() => {
-          router.push("/dashboard");
-          router.refresh();
+          window.location.href = "/dashboard";
         }, 1000);
       }
     } catch (error: any) {
@@ -63,7 +59,6 @@ export function AuthForm() {
     setSuccess(null);
 
     try {
-      // Validate inputs
       if (!email || !password || !fullName) {
         throw new Error("Please fill in all fields");
       }
@@ -93,8 +88,7 @@ export function AuthForm() {
         if (data.user.email_confirmed_at) {
           setSuccess("Account created successfully! Redirecting...");
           setTimeout(() => {
-            router.push("/dashboard");
-            router.refresh();
+            window.location.href = "/dashboard";
           }, 1000);
         } else {
           setSuccess("Account created! Please check your email for a confirmation link.");
