@@ -7,21 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/lib/auth-context";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { convertToProfile, type Profile } from "@/lib/supabase/types";
 import { AlertCircle, CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { useEffect, useState } from "react";
 
-interface UserProfile {
-  id: string;
-  email: string;
-  full_name: string | null;
-  user_role: string;
-}
-
 export default function ProfilePage() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [fullName, setFullName] = useState("");
   const [updating, setUpdating] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,16 +47,16 @@ export default function ProfilePage() {
               full_name: user.user_metadata?.full_name || "",
               user_role: "student",
             })
-            .select()
+            .select("*")
             .single();
 
           if (!insertError && newProfile) {
-            const typedProfile = newProfile as UserProfile;
+            const typedProfile = convertToProfile(newProfile);
             setProfile(typedProfile);
             setFullName(typedProfile.full_name || "");
           }
         } else if (data) {
-          const typedProfile = data as UserProfile;
+          const typedProfile = convertToProfile(data);
           setProfile(typedProfile);
           setFullName(typedProfile.full_name || "");
         }
