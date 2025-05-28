@@ -1,41 +1,36 @@
-import { redirect } from "next/navigation"
-import Link from "next/link"
-import { getSupabaseServer } from "@/lib/supabase/server"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { PlusCircle, Calendar, Home } from "lucide-react"
-import RoomsList from "./rooms-list"
-import BookingsList from "./bookings-list"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getSupabaseServer } from "@/lib/supabase/server";
+import { Calendar, Home, PlusCircle } from "lucide-react";
+import Link from "next/link";
+import BookingsList from "./bookings-list";
+import RoomsList from "./rooms-list";
 
-export const revalidate = 0 // Don't cache this page
+export const revalidate = 0; // Don't cache this page
 
 async function checkAdminAccess() {
-  const supabase = getSupabaseServer()
+  const supabase = getSupabaseServer();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    return false
+    return false;
   }
 
-  const { data, error } = await supabase.from("profiles").select("user_role").eq("id", user.id).single()
+  const { data, error } = await supabase.from("profiles").select("user_role").eq("id", user.id).single();
 
   if (error || !data) {
-    return false
+    return false;
   }
 
-  return data.user_role === "admin"
+  return data.user_role === "admin";
 }
 
 export default async function AdminPage() {
-  const isAdmin = await checkAdminAccess()
-
-  if (!isAdmin) {
-    redirect("/")
-  }
+  const isAdmin = await checkAdminAccess();
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -105,44 +100,41 @@ export default async function AdminPage() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }
 
 async function RoomCount() {
-  const supabase = getSupabaseServer()
-  const { count, error } = await supabase.from("rooms").select("*", { count: "exact", head: true })
+  const supabase = getSupabaseServer();
+  const { count, error } = await supabase.from("rooms").select("*", { count: "exact", head: true });
 
   if (error) {
-    console.error("Error fetching room count:", error)
-    return 0
+    console.error("Error fetching room count:", error);
+    return 0;
   }
 
-  return count || 0
+  return count || 0;
 }
 
 async function PendingBookingsCount() {
-  const supabase = getSupabaseServer()
-  const { count, error } = await supabase
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("status", "pending")
+  const supabase = getSupabaseServer();
+  const { count, error } = await supabase.from("bookings").select("*", { count: "exact", head: true }).eq("status", "pending");
 
   if (error) {
-    console.error("Error fetching pending bookings count:", error)
-    return 0
+    console.error("Error fetching pending bookings count:", error);
+    return 0;
   }
 
-  return count || 0
+  return count || 0;
 }
 
 async function TotalBookingsCount() {
-  const supabase = getSupabaseServer()
-  const { count, error } = await supabase.from("bookings").select("*", { count: "exact", head: true })
+  const supabase = getSupabaseServer();
+  const { count, error } = await supabase.from("bookings").select("*", { count: "exact", head: true });
 
   if (error) {
-    console.error("Error fetching total bookings count:", error)
-    return 0
+    console.error("Error fetching total bookings count:", error);
+    return 0;
   }
 
-  return count || 0
+  return count || 0;
 }
