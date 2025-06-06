@@ -11,6 +11,18 @@ import { AlertCircle, CheckCircle } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 
+// Utility password validation function
+function isStrongPassword(pw: string) {
+  // At least 8 chars, 1 upper, 1 lower, 1 number, 1 symbol
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#^()_\-+=])[A-Za-z\d@$!%*?&#^()_\-+=]{8,}$/.test(pw);
+}
+
+// Utility input sanitizer
+function sanitizeInput(input: string) {
+  // Remove leading/trailing spaces and encode HTML special chars
+  return input.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+}
+
 export function AuthForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,8 +39,11 @@ export function AuthForm() {
     setSuccess(null);
 
     try {
+      // Sanitize email
+      const cleanEmail = sanitizeInput(email);
+
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: cleanEmail,
         password,
       });
 
@@ -63,16 +78,27 @@ export function AuthForm() {
         throw new Error("Please fill in all fields");
       }
 
-      if (password.length < 6) {
-        throw new Error("Password must be at least 6 characters long");
+      // Validasi email
+      const emailTrimmed = sanitizeInput(email);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+        throw new Error("Please enter a valid email address");
+      }
+      // Validasi password
+      if (!isStrongPassword(password)) {
+        throw new Error("Password must be at least 8 characters with uppercase, lowercase, number, and symbol.");
+      }
+      // Validasi fullname (hanya huruf dan spasi, max 50)
+      const cleanFullName = sanitizeInput(fullName);
+      if (!/^[A-Za-z\s]{2,50}$/.test(cleanFullName)) {
+        throw new Error("Full Name should be 2-50 characters and only contain letters and spaces.");
       }
 
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: emailTrimmed,
         password,
         options: {
           data: {
-            full_name: fullName.trim(),
+            full_name: cleanFullName,
           },
         },
       });
@@ -176,7 +202,7 @@ export function AuthForm() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Password</Label>
-                <Input id="signup-password" type="password" placeholder="At least 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                <Input id="signup-password" type="password" placeholder="At least 8 chars, uppercase, lowercase, number, symbol" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
               </div>
             </CardContent>
             <CardFooter>
