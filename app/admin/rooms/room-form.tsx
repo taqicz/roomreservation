@@ -1,5 +1,6 @@
+"use client";
+
 import { Alert } from "@/components/ui/alert";
-import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
@@ -20,14 +21,23 @@ export default function RoomForm({ room }: { room?: any }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = getSupabaseBrowser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      // For debugging: ensure this is triggered!
+      console.log("Submitting form:", {
+        name,
+        capacity,
+        location,
+        description,
+        imageUrl,
+        isAvailable,
+      });
+
       // Validasi input ketat
       const cleanName = sanitizeInput(name);
       if (cleanName.length < 3 || cleanName.length > 50) {
@@ -60,16 +70,26 @@ export default function RoomForm({ room }: { room?: any }) {
         is_available: isAvailable,
       };
 
-      if (room) {
-        // Update existing room
-        const { error } = await supabase.from("rooms").update(roomData).eq("id", room.id);
+      // For debugging: show the payload
+      console.log("Room data to send:", roomData);
 
-        if (error) throw error;
-      } else {
-        // Create new room
-        const { error } = await supabase.from("rooms").insert(roomData);
+      const response = await fetch("/api/admin/rooms", {
+        method: room ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(room ? { ...roomData, id: room.id } : roomData),
+      });
 
-        if (error) throw error;
+      // For debugging: check response status
+      console.log("API response status:", response.status);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // For debugging: show error from API
+        console.error("API error:", data.error);
+        throw new Error(data.error || "Gagal menyimpan data ruangan");
       }
 
       router.push("/admin");
@@ -89,7 +109,33 @@ export default function RoomForm({ room }: { room?: any }) {
           {error}
         </Alert>
       )}
-      {/* ...rest of your form fields... */}
+      <div>
+        <label className="block font-medium">Nama Ruangan</label>
+        <input className="border px-2 py-1 rounded w-full" type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+      </div>
+      <div>
+        <label className="block font-medium">Kapasitas</label>
+        <input className="border px-2 py-1 rounded w-full" type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} required />
+      </div>
+      <div>
+        <label className="block font-medium">Lokasi</label>
+        <input className="border px-2 py-1 rounded w-full" type="text" value={location} onChange={(e) => setLocation(e.target.value)} required />
+      </div>
+      <div>
+        <label className="block font-medium">Deskripsi</label>
+        <textarea className="border px-2 py-1 rounded w-full" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+      </div>
+      <div>
+        <label className="block font-medium">URL Gambar</label>
+        <input className="border px-2 py-1 rounded w-full" type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
+      </div>
+      <div className="flex items-center gap-2">
+        <input type="checkbox" id="is-available" checked={isAvailable} onChange={(e) => setIsAvailable(e.target.checked)} />
+        <label htmlFor="is-available">Tersedia</label>
+      </div>
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700" disabled={loading}>
+        {loading ? "Menyimpan..." : room ? "Update Room" : "Add Room"}
+      </button>
     </form>
   );
 }
