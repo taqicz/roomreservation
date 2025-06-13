@@ -2,8 +2,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import ReCAPTCHA from "react-google-recaptcha";
 
-// Inisialisasi Supabase client
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 const MAX_ATTEMPTS = 5;
@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   // Rate limit state
   const [attempts, setAttempts] = useState(0);
@@ -70,6 +71,26 @@ export default function LoginPage() {
       return;
     }
 
+    // Cek captcha
+    if (!captchaToken) {
+      setError("Please complete the reCAPTCHA!");
+      setLoading(false);
+      return;
+    }
+
+    // Verifikasi captcha ke backend
+    const captchaRes = await fetch("/api/verify-captcha", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captchaToken }),
+    });
+    const captchaData = await captchaRes.json();
+    if (!captchaData.success) {
+      setError("CAPTCHA verification failed. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -101,6 +122,9 @@ export default function LoginPage() {
     <form onSubmit={handleLogin}>
       <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="Email" disabled={disabled} />
       <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required placeholder="Password" disabled={disabled} />
+      <div style={{ margin: "12px 0" }}>
+        <ReCAPTCHA sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!} onChange={(token) => setCaptchaToken(token)} />
+      </div>
       <button type="submit" disabled={disabled}>
         {loading ? "Memproses..." : "Login"}
       </button>
